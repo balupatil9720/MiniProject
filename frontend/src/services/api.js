@@ -5,7 +5,7 @@ const DEV_BACKEND = 'http://localhost:5001/api'; // local backend
 const PROD_BACKEND = 'https://miniproject-1-egug.onrender.com/api'; // deployed backend
 
 const BASE_URL = process.env.NODE_ENV === 'production' ? PROD_BACKEND : DEV_BACKEND;
-const TIMEOUT = 10000; // 10 seconds timeout
+const TIMEOUT = 30000; // 10 seconds timeout
 
 // Create axios instance with base configuration
 const api = axios.create({
