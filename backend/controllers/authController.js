@@ -1,38 +1,38 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 // Generate JWT Token
 const generateToken = (userId) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not set in environment variables');
+  }
+
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
+    expiresIn: process.env.JWT_EXPIRE || '7d'
   });
 };
 
 // Register User
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role, phone, location } = req.body;
+    const { name, email, password, role, phone, location, farmName } = req.body;
 
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email'
-      });
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
     }
 
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role,
-      phone,
-      location
-    });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'User already exists with this email' });
+    }
 
-    // Generate token
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = await User.create({ name, email, password: hashedPassword, role, phone, location, farmName });
+
     const token = generateToken(user._id);
 
     res.status(201).json({
@@ -45,16 +45,14 @@ export const register = async (req, res) => {
         email: user.email,
         role: user.role,
         phone: user.phone,
-        location: user.location
+        location: user.location,
+        farmName: user.farmName
       }
     });
 
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error during registration',
-      error: error.message
-    });
+    console.error('🚨 Registration Error:', error);
+    res.status(500).json({ success: false, message: 'Server error during registration', error: error.message });
   }
 };
 
@@ -63,16 +61,20 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check if user exists and password is correct
-    const user = await User.findOne({ email }).select('+password');
-    if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
-    // Generate token
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
     const token = generateToken(user._id);
 
     res.status(200).json({
@@ -85,16 +87,14 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
         phone: user.phone,
-        location: user.location
+        location: user.location,
+        farmName: user.farmName
       }
     });
 
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error during login',
-      error: error.message
-    });
+    console.error('🚨 Login Error:', error);
+    res.status(500).json({ success: false, message: 'Server error during login', error: error.message });
   }
 };
 
@@ -102,7 +102,11 @@ export const login = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
     res.status(200).json({
       success: true,
       user: {
@@ -112,15 +116,12 @@ export const getMe = async (req, res) => {
         role: user.role,
         phone: user.phone,
         location: user.location,
-        isVerified: user.isVerified
+        farmName: user.farmName
       }
     });
 
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
+    console.error('🚨 GetMe Error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
