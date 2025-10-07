@@ -29,16 +29,14 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // -------------------- CORS Setup --------------------
-// Allow both local dev and deployed frontend
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://miniproject-2-a9xx.onrender.com' // replace with your frontend Render URL
+  'https://miniproject-2-a9xx.onrender.com' // your deployed frontend
 ];
 
 app.use(cors({
   origin: function(origin, callback){
-    // allow requests with no origin (like Postman or curl)
-    if(!origin) return callback(null, true);
+    if(!origin) return callback(null, true); // allow Postman/curl
     if(allowedOrigins.indexOf(origin) === -1){
       return callback(new Error('CORS policy: This origin is not allowed'), false);
     }
@@ -62,40 +60,36 @@ const connectDB = async () => {
     console.log('✅ MongoDB Connected');
   } catch (error) {
     console.log('❌ MongoDB connection error:', error.message);
-    console.log('⚠️  Starting without database connection...');
   }
 };
 
-// -------------------- Routes --------------------
+// -------------------- API Routes --------------------
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Health & Test Routes
+// Health & test routes
 app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Server is healthy 🟢',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+  res.json({ success: true, message: 'Server is healthy 🟢', timestamp: new Date().toISOString() });
 });
 
 app.get('/api/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'All systems operational! 🚀',
-    features: { server: 'running', database: 'connected', api: 'responsive' }
-  });
+  res.json({ success: true, message: 'All systems operational 🚀' });
 });
 
-app.get('/api/blockchain/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Blockchain connection test - Development Mode',
-    mode: 'mock',
-    features: ['authentication','product_tracking','verification']
+// -------------------- Serve Frontend (React) --------------------
+const frontendPath = path.join(__dirname, 'frontend/build');
+if (fs.existsSync(frontendPath)) {
+  app.use(express.static(frontendPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
   });
+}
+
+// -------------------- Global Error Handler --------------------
+app.use((err, req, res, next) => {
+  console.error('🚨 Server Error:', err.stack);
+  res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
 });
 
 // -------------------- Start Server --------------------
@@ -111,8 +105,6 @@ const startServer = async () => {
     console.log(`📍 Server Port: ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🗄️  Database: ${mongoose.connection.readyState === 1 ? '✅ Connected' : '❌ Not connected'}`);
-    console.log(`⛓️  Blockchain: 🔧 Development Mode (Mock)`);
-    console.log(`📱 API URL: http://localhost:${PORT}/api`);
     console.log('============================================================\n');
   });
 };
