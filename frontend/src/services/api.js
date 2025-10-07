@@ -1,10 +1,17 @@
 import axios from 'axios';
-import API_CONFIG from '../config/api';
+
+// Automatically choose backend URL based on environment
+const DEV_BACKEND = 'http://localhost:5001/api'; // local backend
+const PROD_BACKEND = 'https://miniproject-1-egug.onrender.com/api'; // deployed backend
+
+const BASE_URL = process.env.NODE_ENV === 'production' ? PROD_BACKEND : DEV_BACKEND;
+const TIMEOUT = 10000; // 10 seconds timeout
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: API_CONFIG.BASE_URL,
-  timeout: API_CONFIG.TIMEOUT,
+  baseURL: BASE_URL,
+  timeout: TIMEOUT,
+  withCredentials: true // needed if backend uses cookies
 });
 
 // Request interceptor to add auth token
@@ -13,37 +20,37 @@ api.interceptors.request.use(
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('Adding token to request:', token.substring(0, 20) + '...');
-    } else {
-      console.warn('No auth token found in localStorage');
     }
     return config;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
-    console.log('API Response:', response.config.url, response.status);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.status, error.response?.data);
-    
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      localStorage.removeItem('userType');
-      window.location.href = '/login';
+    if (error.response) {
+      const { status } = error.response;
+
+      if (status === 401) {
+        // Token expired or invalid → logout user
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userType');
+        window.location.href = '/login';
+      }
+
+      console.error('API Error:', status, error.response.data);
+    } else {
+      console.error('API Network Error:', error.message);
     }
-    
+
     return Promise.reject(error);
   }
 );
 
 export default api;
+export { BASE_URL };
