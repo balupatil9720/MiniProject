@@ -31,7 +31,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // CORS configuration
 app.use(cors({
-  origin: 'http://localhost:3000', // React dev server
+ origin: ["https://miniproject-2-a9xx.onrender.com"], // React dev server
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
