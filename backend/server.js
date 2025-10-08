@@ -29,24 +29,14 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // -------------------- CORS Setup --------------------
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://miniproject-2-a9xx.onrender.com' // your deployed frontend
-];
+
 
 app.use(cors({
-  origin: function(origin, callback){
-    if(!origin) return callback(null, true); // allow Postman/curl
-    if(allowedOrigins.indexOf(origin) === -1){
-      return callback(new Error('CORS policy: This origin is not allowed'), false);
-    }
-    return callback(null, true);
-  },
+  origin: '*',             // allow all origins
   methods: ['GET','POST','PUT','PATCH','DELETE'],
-  credentials: true,
-  allowedHeaders: ['Content-Type','Authorization']
+  allowedHeaders: ['Content-Type','Authorization'],
+  credentials: true        // note: with origin '*' credentials cannot be used in browsers
 }));
-
 // Middleware
 app.use(express.json());
 
